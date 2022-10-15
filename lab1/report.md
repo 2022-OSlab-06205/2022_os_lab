@@ -56,6 +56,16 @@ gtk initialization failed
 
 &emsp;
 
+### BUG5: 关于vscode无法远程连接ubuntu虚拟机
+
+&emsp;
+
+问题：vscode在安装remote-ssh插件后，仍无法远程连接ubuntu虚拟机，报错无法获取虚拟机的操作系统类别，且没有.ssh文件夹的权限
+
+解决：在remote-ssh设置中的remote platform中预设虚拟机ip地址及指定平台，并在C盘中找到.ssh文件夹，右键选择属性-安全，编辑其访问权限。
+
+&emsp;
+
 ## 吐槽
 
 
