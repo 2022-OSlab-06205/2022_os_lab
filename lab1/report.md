@@ -1,4 +1,4 @@
-# Lab1 report 
+# Lab1 report
 
 &emsp;
 
@@ -64,10 +64,7 @@ gtk initialization failed
 
 解决：在remote-ssh设置中的remote platform中预设虚拟机ip地址及指定平台，并在C盘中找到.ssh文件夹，右键选择属性-安全，编辑其访问权限。
 
-&emsp;
-
 ## 吐槽
-
 
 代码量过大，并且陌生，阅读比较困难。对相关概念理解不够深入。
 
@@ -335,45 +332,109 @@ TERMINAL        :=gnome-terminal
 
 ```
 1)调用GCC将部分.c和.S文件，编译成了目标文件。
-kern/init目录：init.c（系统初始化部分）
-kern/libs目录：stdio.c、readline.c（公共库部分）
-kern/debug目录：panic.c、kdebug.c、kmonitor.c（内核调试部分）
-kern/driver目录：clock.c、console.c、picirq.c、intr.c（外设驱动部分）
-kern/trap目录：trap.c、vectors.S、trapentry.S（中断处理部分）
-kern/mm目录：pmm.c（内存管理部分）
-libs目录：string.c、printfmt.c（公共库部分）
-即代码+ cc kern/init/init.c以下到+ ld bin/kernel以上的过程
-(2)通过ld，将目标文件链接，生成kernel可执行文件。
-使用ld命令链接上面生成的各目标文件，并根据tools/kernel.ld脚本文件进行链接，
-链接后生成bin/kernel即OS内核文件。
-(3)编译并链接生成bootloader。
-首先使用gcc将bootasm.S（定义并实现了bootloader最先执行的函数start，此函数进行了一定
-的初始化，完成了从实模式到保护模式的转换，并调用bootmain.c中的bootmain函数）、
-bootmain.c（定义并实现了bootmain函数实现了通过屏幕、串口和并口显示字符串。
-bootmain函数加载ucore操作系统到内存，然后跳转到ucore的入口处执行）生成目标文件，
-再使用ld将两个目标文件链接，设置entry入口为start段，代码段起始位置为0x7c00，
-使用sign程序将bootblock.o文件添加主引导扇区的标志，使其作为bootloader。
-(4)生成OS镜像文件
-dd是一个Unix和类Unix系统上的命令，主要功能为转换和复制文件，这里使用dd来生成最终的
-ucore镜像文件，块大小（bs）默认为512B。
-使用/dev/zero虚拟设备，生成10000个块的空字符（0x00），每个块大小为512B，
-因此ucore.img总大小为5,120,000B。
-接下来两行代码中的转换选项为notrunc，意味着不缩减输出文件。换言之，如果输出文件已经存在，
-那么只改变指定的字节，然后退出，并保留输出文件的剩余部分。如果没有这个选项，dd命令将创建
-一个512B长的文件。
-将bootloader（bin/bootblock文件）代码复制到ucore.img文件头处，共512B大小，即只修
-改ucore.img的文件头处的512B。
-将kernel（bin/kernel文件）复制到ucore.img距文件头偏移1个块大小的地方，也即
-ucore.img前512B放bootloader，紧接着放kernel。
-```
 
+kern/init目录：init.c（系统初始化部分）
+
+kern/libs目录：stdio.c、readline.c（公共库部分）
+
+kern/debug目录：panic.c、kdebug.c、kmonitor.c（内核调试部分）
+
+kern/driver目录：clock.c、console.c、picirq.c、intr.c（外设驱动部分）
+
+kern/trap目录：trap.c、vectors.S、trapentry.S（中断处理部分）
+
+kern/mm目录：pmm.c（内存管理部分）
+
+libs目录：string.c、printfmt.c（公共库部分）
+
+即代码+ cc kern/init/init.c以下到+ ld bin/kernel以上的过程
+
+(2)通过ld，将目标文件链接，生成kernel可执行文件。
+
+使用ld命令链接上面生成的各目标文件，并根据tools/kernel.ld脚本文件进行链接，链接后生成bin/kernel即OS内核文件。
+
+(3)编译并链接生成bootloader。
+
+首先使用gcc将bootasm.S（定义并实现了bootloader最先执行的函数start，此函数进行了一定的初始化，完成了从实模式到保护模式的转换，
+
+并调用bootmain.c中的bootmain函数）、bootmain.c（定义并实现了bootmain函数实现了通过屏幕、串口和并口显示字符串。bootmain函数加载ucore操作系统到内存，然后跳转到ucore的入口处执行）生成目标文件，
+
+再使用ld将两个目标文件链接，设置entry入口为start段，代码段起始位置为0x7c00，
+
+使用sign程序将bootblock.o文件添加主引导扇区的标志，使其作为bootloader。
+
+(4)生成OS镜像文件
+
+dd是一个Unix和类Unix系统上的命令，主要功能为转换和复制文件，这里使用dd来生成最终的ucore镜像文件，块大小（bs）默认为512B。
+
+使用/dev/zero虚拟设备，生成10000个块的空字符（0x00），每个块大小为512B，因此ucore.img总大小为5,120,000B。
+
+接下来两行代码中的转换选项为notrunc，意味着不缩减输出文件。换言之，如果输出文件已经存在，
+
+那么只改变指定的字节，然后退出，并保留输出文件的剩余部分。如果没有这个选项，dd命令将创建一个512B长的文件。
+
+将bootloader（bin/bootblock文件）代码复制到ucore.img文件头处，共512B大小，即只修改ucore.img的文件头处的512B。
+
+将kernel（bin/kernel文件）复制到ucore.img距文件头偏移1个块大小的地方，也即ucore.img前512B放bootloader，紧接着放kernel。
+```
+详细描述：
+```
+1.设置生成的kernel目标名为bin/kernel
+
+2.$(kernel): tools/kernel.ld指出kernel目标文件需要依赖tools/kernel.ld文件，而kernel.ld文件是一个链接脚本，其中设置了输出的目标文件的入口地址及各个段的一些属性，包括各个段是由输入文件的哪些段组成、各个段的起始地址等。
+
+3.指出kernel目标文件依赖的obj文件。最终效果为KOBJS=obj/libs/.o obj/kern/**/.o。
+
+4.打印kernel目标文件名
+
+5.$(V)$(LD) $(LDFLAGS) -T tools/kernel.ld -o $@ $(KOBJS)链接所有生成的obj文件得到kernel文件
+
+6.@$(OBJDUMP) -S $@ > $(call asmfile,kernel)使用objdump工具对kernel目标文件反汇编，以便后续调试。首先toobj返回obj/kernel.o，然后cgtype返回obj/kernel.asm，相当于执行objdump -S bin/kernel > obj/kernel.asm，objdump的-S选项是交替显示将C源码和汇编代码。
+
+7.@$(OBJDUMP) -t $@ | $(SED) '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $(call sy mfile,kernel)使用objdump工具来解析kernel目标文件得到符号表。如果不关注格式处理，实际执行语句等效于objdump -t bin/kernel > obj/kernel.sym
+
+8.调用create_target函数：$(call create_target,kernel)，而create_target的定义为create_target = $(eval $(call do_create_target,$(1),$(2),$(3),$(4),$(5)))可见create_target只是进一步调用了do_create_target的函数：do_create_target(kernel)
+
+9.do_create_target的定义如下。由于只有一个输入参数，temp_objs为空字符串，并且走的是else分支，因此感觉这里的函数调用是直接返回，啥也没干？
+
+1.bootfiles = $(call listf_cc,boot)，前面已经知道listf_cc函数是过滤出对应目录下的.c和.S文件，因此等同于bootfiles=boot/\*.c boot/\*.S
+
+2.$(foreach f,$(bootfiles),$(call cc_compile,$(f),$(CC),$(CFLAGS) -Os -nostdinc))从字面含义也可以看出是编译bootfiles生成.o文件
+
+4.bootblock = $(call totarget,bootblock)，前面已经知道totarget函数是给输入参数增加前缀"bin/"，因此等同于bootblock="bin/bootblock"
+
+5.声明bin/bootblock依赖于obj/boot/*.o 和bin/sign文件：$(bootblock): $(call toobj,$(bootfiles)) | $(call totarget,sign)。注意toobj函数的作用是给输入参数增加前缀obj/，并将文件后缀名改为.o
+
+6.链接所有.o文件以生成obj/bootblock.o：$(V)$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 $^ -o $(call toobj,bootblock)。这里要注意链接选项中的-e start -Ttext 0x7C00，大致意思是设置bootblock的入口地址为start标签，而且start标签的地址为0x7C00.
+
+7.反汇编obj/bootblock.o文件得到obj/bootblock.asm文件：@$(OBJDUMP) -S $(call objfile,bootblock) > $(call asmfile,bootblock)
+
+8.使用objcopy将obj/bootblock.o转换生成obj/bootblock.out文件，其中-S表示转换时去掉重定位和符号信息：@$(OBJCOPY) -S -O binary $(call objfile,bootblock) $(call outfile,bootblock)
+
+9.使用bin/sign工具将obj/bootblock.out转换生成bin/bootblock目标文件：@$(call totarget,sign) $(call outfile,bootblock) $(bootblock)，从tools/sign.c代码中可知sign工具其实只做了一件事情：将输入文件拷贝到输出文件，控制输出文件的大小为512字节，并将最后两个字节设置为0x55AA（也就是ELF文件的magic number）
+
+10.调用了create_target函数$(call create_target,bootblock)，根据上文的分析，由于只有一个输入参数，此处函数调用应该也是直接返回，啥也没干。
+
+1.设置了ucore.img的目标名：UCOREIMG := $(call totarget,ucore.img)，前面已经知道totarget的作用是添加bin/前缀，因此UCOREIMG = bin/ucore.img
+
+2.指出bin/ucore.img依赖于bin/kernel和bin/bootblock：$(UCOREIMG): $(kernel) $(bootblock)
+
+3.·( V ) d d i f = / d e v / z e r o o f = (V)dd if=/dev/zero of=(V)ddif=/dev/zeroof=@ count=10000·。这里为bin/ucore.img分配10000个block的内存空间，并全部初始化为0。由于没指定block的大小，因此为默认值512字节，则总大小为5000M，约5G。
+
+4.$(V)dd if=$(bootblock) of=$@ conv=notrunc。这里将bin/bootblock复制到bin/ucore.img
+
+5.$(V)dd if=$(kernel) of=$@ seek=1 conv=notrunc。继续将bin/kernel复制到bin/ucore.img，这里使用了选项seek=1，意思是：复制时跳过bin/ucore.img的第一个block，从第2个block也就是第512个字节后面开始拷贝bin/kernel的内容。原因是显然的：ucore.img的第1个block已经用来保存bootblock的内容了。
+
+6.$(call create_target,ucore.img)，由于只有一个输入参数，因此这里会直接返回。
+```
 总结：
 
 ```
-ucore.img是一个包含了bootloader和OS的硬盘镜像。kernel即内核，一个用来管理软件发出
-的资料I/O（输入与输出）要求的电脑程序，将这些要求转译为资料处理的指令并交由中央处理
-器（CPU）及电脑中其他电子组件进行处理。bootloader即引导加载器，一个用来通电后自检并
-引导装载操作系统或其他系统软件的计算机程序。ucore.img的生成实际上也是在生成这两个程序。
+ucore.img是一个包含了bootloader和OS的硬盘镜像。kernel即内核，一个用来管理软件发出的资料I/O（输入与输出）要求的电脑程序，
+
+将这些要求转译为资料处理的指令并交由中央处理器（CPU）及电脑中其他电子组件进行处理。bootloader即引导加载器，
+
+一个用来通电后自检并引导装载操作系统或其他系统软件的计算机程序。ucore.img的生成实际上也是在生成这两个程序。
 ```
 
 [练习1.2] 一个被系统认为是符合规范的硬盘主引导扇区的特征是什么?
@@ -489,17 +550,17 @@ Breakpoint 2, 0x00007c00 in ?? ()
 
 1. 定义常量与宏
    
-   bootasm.S一开始先定义了三个常量。PROT_MODE_CSEG和PROT_MODE_DSEG分别作为内核代码段、数据段的选择子。并且由图可知，二者分别指向GDT[1]和GDT[2]，RPL为0，CPL为0。而CRO_PE_ON则是切换到保护模式时的使能标志。
+   bootasm.S一开始先定义了三个常量。PROT_MODE_CSEG和PROT_MODE_DSEG分别作为内核代码段、数据段的选择子。二者分别指向GDT[1]和GDT[2]，RPL为0，CPL为0。而CRO_PE_ON则是切换到保护模式时的使能标志。
 
 2. 初始化寄存器
 
 ```
-cli
-cld
-xorw %ax, %ax
-movw %ax, %ds
-movw %ax, %es
-movw %ax, %ss
+cli    #屏蔽中断
+cld    #设置串地址增长方向
+xorw %ax, %ax  
+movw %ax, %ds  #data
+movw %ax, %es  #extra segment
+movw %ax, %ss  #stack segment
 ```
 
 bootloader入口地址为start函数，此时处于实模式。首先需要关闭中断，避免产生中断被BIOS中断处理程序处理。之后将各个段寄存器基址设为0。
@@ -513,24 +574,20 @@ bootloader入口地址为start函数，此时处于实模式。首先需要关�
     #  1MB wrap around to zero by default. This code undoes this.
 
     # 等待8042 Input buffer为空，即等待8042芯片为空闲状态。判断8042是否空闲可以通过循环读取8042的状态寄存器到CPU寄存器al，判断al是否为0x2(芯片初始系统状态)来实现。
-seta20.1:
-    inb $0x64, %al                                  # Wait for not busy(8042 input buffer empty).
-    testb $0x2, %al
-    jnz seta20.1
 
-    # 发送Write 8042 Output Port （P2）命令到8042 Input buffer。
-    movb $0xd1, %al                                 # 0xd1 -> port 0x64
-    outb %al, $0x64                                 # 0xd1 means: write data to 8042's P2 port
+seta20.1:	
 
+    inb $0x64, %al			#读取当前状态到al寄存器
+    testb $0x2, %al			#检查当前状态寄存器的第二位是否为1(缓冲区是否为空)
+    jnz seta20.1			#若缓冲区不为0，跳转到开始处
+    movb $0xd1, %al         #将0xd1h写入al寄存器
+    outb %al, $0x64         #向0x64h发送0xd1h命令，表示要写                      
 seta20.2:
-    # 等待8042输入端口空闲
-    inb $0x64, %al                                  # Wait for not busy(8042 input buffer empty).
-    testb $0x2, %al
-    jnz seta20.2
-
-    # 发送Write 8042 Output Port （P2）命令到8042 Input buffer。
-    movb $0xdf, %al                                 # 0xdf -> port 0x60
-    outb %al, $0x60                                 # 0xdf = 11011111, means set P2's A20 bit(the 1 bit) to 1
+    inb $0x64, %al          #同1
+    testb $0x2, %al			#同1
+    jnz seta20.2			#同1
+    movb $0xdf, %al         #将0xdfh写入al寄存器                       
+    outb %al, $0x60         #向0x60h写入0xdfh，打开A20 
 ```
 
 4. 初始化GDT表
@@ -566,9 +623,13 @@ gdt:
     SEG_ASM(STA_X|STA_R, 0x0, 0xffffffff)           # code seg for bootloader and kernel
     SEG_ASM(STA_W, 0x0, 0xffffffff)                 # data seg for bootloader and kernel
 
+下面的代码给出了全局描述符表的具体内容。共有3项，每项8字节。第1项是空白项，内容为全0. 后面2项分别是代码段和数据段的描述符，它们的base都设置为0，limit都设置为0xffffff，也就是长度均为4G. 代码段设置了可读和可执行权限，数据段设置了可写权限。
+
 gdtdesc:
     .word 0x17                                      # sizeof(gdt) - 1，GDT边界，三个段，共3 * 8 = 24 B，值为24 - 1 = 23 (0x17)
     .long gdt                                       # address gdt，GTD基址，长度32
+
+1、boot/bootasm.S中的lgdt gdtdesc把全局描述符表的大小和起始地址共8个字节加载到全局描述符表寄存器GDTR中。从代码中可以看到全局描述符表的大小为0x17 + 1 = 0x18，也就是24字节。由于全局描述符表每项大小为8字节，因此一共有3项，而第一项是空白项，所以全局描述符表中只有两个有效的段描述符，分别对应代码段和数据段。
 ```
 
 GDT被设置为４字节对齐，仅定义了GDT[0]（空段）、GDT[1]（内核代码段）、GDT[2]（内核数据段）。代码段和数据段基址均为0，总长度都为整个内存空间4G大小，因此逻辑地址=线性地址
@@ -603,6 +664,8 @@ GDT被设置为４字节对齐，仅定义了GDT[0]（空段）、GDT[1]（内�
     # Jump to next instruction, but in 32-bit code segment.
     # Switches processor into 32-bit mode.
     ljmp $PROT_MODE_CSEG, $protcseg
+    #通过一个长跳转来更新CS寄存器的基地址
+    #我们可以注意到代码段最前面定义了PROT_MODE_CSGE和PROT_MODE_DSEG，分别被定义为0x8h和0x10h，这两个分别是代码段和数据段的选择子。
 ```
 
 随后将所有段寄存器设置为PROT_MODE_DSEG（指向内核数据段）。将栈区域设置为0x00~0x7c00，即bootloader之下都是栈的空间，然后使用call指令执行bootmain.c，开始加载kernel。bootmain函数正常情况不会返回，如果返回肯定是bootloader产生错误，进入死循环。
@@ -635,6 +698,16 @@ IBM公司发明了使用一个开关来开启或禁止`0x100000`地址比特位�
 
 ## [练习4]
 
+I/o地址	功能
+0x1f0	读数据，当0x1f7不为忙状态时，可以读
+0x1f1	可获得详细的错误信息
+0x1f2	与读写的扇区数量，每次读写前，都需要表明要读写几个扇区
+0x1f3	如果是LBA格式，就是读LBA参数的0~7位
+0x1f4	如果是LBA格式，就是读LBA参数的8~15位
+0x1f5	如果是LBA格式，就是读LBA参数的16~23位
+0x1f6	第0~3位：如果是LBA模式就是24-27位 第4位：为0主盘；为1从盘
+0x1f7	状态和命令寄存器。操作时先给命令，再读取，如果不是忙状态就从0x1f0端口读数据
+
 分析`bootloader`加载ELF格式的OS的过程。
 
 `bootloader`需要把kernel从虚拟磁盘读取到内存中。在`bootmain.c`文件中定义了三个函数：`waitdisk()`，`readsect()`，`readseg()`和`bootmain()`。
@@ -657,10 +730,10 @@ while ((inb (0x1F7) & 0xC0) != 0x40)
         waitdisk();
 
         outb(0x1F2, 1);                         // 设置读取扇区的数目为1
-        outb(0x1F3, secno & 0xFF);
-        outb(0x1F4, (secno >> 8) & 0xFF);
-        outb(0x1F5, (secno >> 16) & 0xFF);
-        outb(0x1F6, ((secno >> 24) & 0xF) | 0xE0);
+        outb(0x1F3, secno & 0xFF);              // 要读取的扇区编号
+        outb(0x1F4, (secno >> 8) & 0xFF);       // 用来存放读写柱面的低8位字节
+        outb(0x1F5, (secno >> 16) & 0xFF);      // 用来存放读写柱面的高2位字节
+        outb(0x1F6, ((secno >> 24) & 0xF) | 0xE0);  //用来存放读写柱面的高2位字节
             // 上面四条指令联合制定了扇区号
             // 在这4个字节线联合构成的32位参数中
             //   29-31位强制设为1
@@ -748,6 +821,16 @@ readseg函数提供的功能是从磁盘读取count字节数据到虚拟地址va
         while (1);
     }
 ```
+流程同下：
+首先从硬盘中将bin/kernel文件的第一页内容加载到内存地址为0x10000的位置，目的是读取kernel文件的ELF Header信息。
+
+校验ELF Header的e_magic字段，以确保这是一个ELF文件
+
+读取ELF Header的e_phoff字段，得到Program Header表的起始地址；读取ELF Header的e_phnum字段，得到Program Header表的元素数目。
+
+遍历Program Header表中的每个元素，得到每个Segment在文件中的偏移、要加载到内存中的位置（虚拟地址）及Segment的长度等信息，并通过磁盘I/O进行加载
+
+加载完毕，通过ELF Header的e_entry得到内核的入口地址，并跳转到该地址开始执行内核代码
 
 分析可得载入流程为：
 （1）先从硬盘读取一页大小数据（4K）到内存0x10000地址处，即读取kernel的ELF文件头和程序头表加载到ELFHDR（0x10000）处。
