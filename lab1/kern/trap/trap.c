@@ -56,7 +56,7 @@ idt_init(void) {
         SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
     }
 	// set for switch from user to kernel
-    // 选择需要从user特权级转化为kernel特权级的项
+    // 选择需要从user特权级转化为kernel特权级的项(系统调用中断)
     SETGATE(idt[T_SWITCH_TOK], 1, KERNEL_CS, __vectors[T_SWITCH_TOK], DPL_USER);
 	// load the IDT
     // 加载IDT

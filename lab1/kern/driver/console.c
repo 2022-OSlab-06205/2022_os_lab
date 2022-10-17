@@ -389,7 +389,6 @@ kbd_proc_data(void) {
 
     if (data == 0x04) {
         switch_to_user();
-        switch_to_kernel();
     } else if (data == 0x0b) {
         switch_to_kernel();
     }
@@ -411,7 +410,6 @@ kbd_proc_data(void) {
         cprintf("Rebooting!\n");
         outb(0x92, 0x3); // courtesy of Chris Frost
     }
-    cprintf("%d\n", data);
     return c;
 }
 

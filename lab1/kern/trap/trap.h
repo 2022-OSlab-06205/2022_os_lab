@@ -86,8 +86,6 @@ void idt_init(void);
 void print_trapframe(struct trapframe *tf);
 void print_regs(struct pushregs *regs);
 bool trap_in_kernel(struct trapframe *tf);
-void switch_to_user(void);
-void switch_to_kernel(void);
 
 #endif /* !__KERN_TRAP_TRAP_H__ */
 

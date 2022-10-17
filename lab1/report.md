@@ -40,23 +40,7 @@ gtk initialization failed
 
 &emsp;
 
-### BUG4: 有关challenge2部分遇到的问题
-
-&emsp;
-
-问题：一系列问题，包括但不限于无法找到对应答案，汇编语句内联失败，无法正确定位对应代码，切换到用户模式后停顿等。
-
-解决：
-
-1. 首先，阅读gitbook对应章节，了解ucore中中断处理相关原理，可知产生中断的方法为内联对应的汇编代码，并将参数设置为中断向量号。`int`指令为x86的中断触发指令，系统在接收到中断之后会从`tarp_entry.S`进入，在压入原有寄存器等信息之后，跳转至`trap.c`中的`trap`函数当中。`trap`函数的处理过程为`trap_dispatch`通过`switch`语句分类处理各种中断。其中有关内核和用户模式的切换需要对`tf`进行修改，修改`cs`寄存器的值，并将低位修改为0或者3，这样就会让操作系统以为level已被修改。
-
-2. 查看`kernel/drivers`中的`console.c`，内含有关键盘输入字符触发的处理函数`kbd_proc_data`，它会识别传入的`data`，并找到其对应的字符`c`，再返回。其中如果识别出`data == 0x04`或者`data == 0x0b`，即按下的按键为键盘上方的数字3或0，就会执行我们在`trap.c`新定义的函数`switch_to_user`和`switch_to_kernel`，其本质也是内联汇编。
-
-3. 在`trap_dispatch`对应分支下添加`print_trapframe()`，打印中断帧的状态。运行`make qemu`检测是否正确。可以发现按下0时，能够正确切换至内核状态，并继续输出`100ticks`。按下3时，虽然也能正确切换至用户状态，但是无法继续打印`100ticks`了。据猜测应该是用户模式下无法执行中断处理代码，或者中断无法触发。在末尾重新切换会内核状态即可结束调试。
-
-&emsp;
-
-### BUG5: 关于vscode无法远程连接ubuntu虚拟机
+### BUG4: 关于vscode无法远程连接ubuntu虚拟机
 
 &emsp;
 
@@ -1170,4 +1154,73 @@ trap_dispatch(struct trapframe *tf) {
 100 ticks
 100 ticks
 100 ticks
+```
+## [challenge 1]
+```
+//	init.c
+static void
+lab1_switch_to_user(void) {
+    //LAB1 CHALLENGE 1 : TODO
+    asm volatile(
+		    "sub $0x8,%%esp \n"         #开辟栈空间
+		    "int %0 \n"                 #引发中断
+		    "movl %%ebp, %%esp \n"      #更新栈顶
+		    :
+		    :"i"(T_SWITCH_TOU)          #调用T_SWITCH_TOU号中断
+		);
+}
+static void
+lab1_switch_to_kernel(void) {
+    //LAB1 CHALLENGE 1 :  TODO
+    asm volatile(
+		    "int %0 \n"                 #引发中断
+		    "movl %%ebp, %%esp \n"      #更新栈顶
+		    :
+		    :"i"(T_SWITCH_TOK)          #调用T_SWITCH_TOK号中断
+		);
+}
+```
+```
+// trap.c
+	case T_SWITCH_TOU:
+        if(tf->tf_cs != USER_CS)	//检查是不是用户态，不是就操作
+        {
+                // 设置用户态对应的cs,ds,es,ss四个寄存器
+            	tf->tf_cs = USER_CS;
+                tf->tf_ds = tf->tf_es = tf->tf_ss = USER_DS;
+                // 赋予IO权限
+                tf->tf_eflags |= FL_IOPL_MASK;
+        }
+        break;
+
+	case T_SWITCH_TOK:
+        if(tf->tf_cs != KERNEL_CS)	//检查是不是内核态，不是就操作
+        {
+            	// 设置内核态对应的cs,ds,es三个寄存器
+                tf->tf_cs = KERNEL_CS;
+                tf->tf_ds = tf->tf_es = KERNEL_DS;
+				// 取消IO权限
+                tf->tf_eflags &= ~FL_IOPL_MASK;
+        }
+        break;
+```
+中断可以发生在任何一个特权级别下，但是不同的特权级处理器使用的栈不同，如果涉及到特权级的变化，需要对SS和ESP寄存器进行压栈。性质如下：
+
+当低特权级向高特权级切换的压栈(用户态到内核态)
+
+需要判断是否能访问这个目标段描述符，要做的就是将找到中断描述符时的CPL与目标段描述符的DPL进行比较。当CPL特权级比DPL低(CPL>DPL)时，要往高特权级栈转移，也就是说要恢复旧栈，因此处理器临时保存旧栈的SS和ESP，然后加载新的特权级和DPL相同的段到SS和ESP中，把旧栈的SS和ESP压入新栈
+
+当无特权级转化时的压栈(内核态到用户态)
+
+理论上来说从内核态到用户态也需要对栈进行切换，不过在lab1中并没有完整实现对物理内存的管理，而GDT中的每一个段除了对特权级的要求以外都一样，所以只需要修改一下权限就可以实现了。这也导致这个时候不会压栈，我们需要手动压栈(体现在lab1_switch_to_user中的sub $0x8,%%esp)。
+
+## [challenge 2]
+```
+//console.c
+    //输入中间键盘的3
+    if (data == 0x04) {
+        switch_to_user();
+    } else if (data == 0x0b) {
+        switch_to_kernel();
+    }//输入中间键盘的0
 ```
