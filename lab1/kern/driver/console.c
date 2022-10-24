@@ -387,11 +387,7 @@ kbd_proc_data(void) {
         shift &= ~E0ESC;
     }
 
-    if (data == 0x04) {
-        switch_to_user();
-    } else if (data == 0x0b) {
-        switch_to_kernel();
-    }
+
 
     shift |= shiftcode[data];
     shift ^= togglecode[data];

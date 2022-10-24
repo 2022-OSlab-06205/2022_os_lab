@@ -48,21 +48,6 @@ gtk initialization failed
 
 解决：在remote-ssh设置中的remote platform中预设虚拟机ip地址及指定平台，并在C盘中找到.ssh文件夹，右键选择属性-安全，编辑其访问权限。
 
-### BUG5: 有关challenge2部分遇到的问题
-
-&emsp;
-
-问题：一系列问题，包括但不限于无法找到对应答案，汇编语句内联失败，无法正确定位对应代码，切换到用户模式后停顿等。
-
-解决：
-
-1. 首先，阅读gitbook对应章节，了解ucore中中断处理相关原理，可知产生中断的方法为内联对应的汇编代码，并将参数设置为中断向量号。`int`指令为x86的中断触发指令，系统在接收到中断之后会从`tarp_entry.S`进入，在压入原有寄存器等信息之后，跳转至`trap.c`中的`trap`函数当中。`trap`函数的处理过程为`trap_dispatch`通过`switch`语句分类处理各种中断。其中有关内核和用户模式的切换需要对`tf`进行修改，修改`cs`寄存器的值，并将低位修改为0或者3，这样就会让操作系统以为level已被修改。
-
-2. 查看`kernel/drivers`中的`console.c`，内含有关键盘输入字符触发的处理函数`kbd_proc_data`，它会识别传入的`data`，并找到其对应的字符`c`，再返回。其中如果识别出`data == 0x04`或者`data == 0x0b`，即按下的按键为键盘上方的数字3或0，就会执行我们在`trap.c`新定义的函数`switch_to_user`和`switch_to_kernel`，其本质也是内联汇编。
-
-3. 在`trap_dispatch`对应分支下添加`print_trapframe()`，打印中断帧的状态。运行`make qemu`检测是否正确。可以发现按下0时，能够正确切换至内核状态，并继续输出`100ticks`。按下3时，虽然也能正确切换至用户状态，但是无法继续打印`100ticks`了。据猜测应该是用户模式下无法执行中断处理代码，或者中断无法触发。在末尾重新切换会内核状态即可结束调试。
-
-&emsp;
 ## 吐槽
 
 代码量过大，并且陌生，阅读比较困难。对相关概念理解不够深入。
@@ -1237,12 +1222,43 @@ lab1_switch_to_kernel(void) {
 理论上来说从内核态到用户态也需要对栈进行切换，不过在lab1中并没有完整实现对物理内存的管理，而GDT中的每一个段除了对特权级的要求以外都一样，所以只需要修改一下权限就可以实现了。这也导致这个时候不会压栈，我们需要手动压栈(体现在lab1_switch_to_user中的sub $0x8,%%esp)。
 
 ## [challenge 2]
+在Challenge1中我们已经实现了用户模式和内核模式的相互切换，所需要的只是增加一个用键盘输入来控制切换的功能。我们找到控制状态切换的trap.c文件中的trap_dispatch函数，发现已经我们提供了一个case IRQ_OFFSET + IRQ_KBD:(键盘输入情况)。判断键盘输入的字符，实现控制。
 ```
 //console.c
-    //输入中间键盘的3
-    if (data == 0x04) {
-        switch_to_user();
-    } else if (data == 0x0b) {
-        switch_to_kernel();
-    }//输入中间键盘的0
+    case IRQ_OFFSET + IRQ_KBD:
+        c = cons_getc();
+        if(c == 48){
+            cprintf("kbd [%03d] %c\n", c, c);
+            if (tf->tf_cs != KERNEL_CS) {
+            tf->tf_cs = KERNEL_CS;
+            tf->tf_ds = tf->tf_es = KERNEL_DS;
+            tf->tf_eflags &= ~FL_IOPL_MASK;
+            switchu2k = (struct trapframe *)(tf->tf_esp - (sizeof(struct trapframe) - 8));
+            memmove(switchu2k, tf, sizeof(struct trapframe) - 8);
+            *((uint32_t *)tf - 1) = (uint32_t)switchu2k;
+            cprintf("+++ switch to kernel mode +++\n");
+            print_trapframe(tf);
+        }
+        }
+        else if(c == 51){
+            
+            if (tf->tf_cs != USER_CS) {
+            cprintf("kbd [%03d] %c\n", c, c);
+            switchk2u = *tf;
+            switchk2u.tf_cs = USER_CS;
+            switchk2u.tf_ds = switchk2u.tf_es = switchk2u.tf_ss = USER_DS;
+            switchk2u.tf_esp = (uint32_t)tf + sizeof(struct trapframe) - 8;
+		
+            // set eflags, make sure ucore can use io under user mode.
+            // if CPL > IOPL, then cpu will generate a general protection.
+            switchk2u.tf_eflags |= FL_IOPL_MASK;
+		
+            // set temporary stack
+            // then iret will jump to the right stack
+            *((uint32_t *)tf - 1) = (uint32_t)&switchk2u;
+            cprintf("+++ switch to user mode +++\n");
+            print_trapframe(tf);
+    }
+        break;
 ```
+

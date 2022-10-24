@@ -58,6 +58,7 @@ idt_init(void) {
 	// set for switch from user to kernel
     // 选择需要从user特权级转化为kernel特权级的项(系统调用中断)
     SETGATE(idt[T_SWITCH_TOK], 1, KERNEL_CS, __vectors[T_SWITCH_TOK], DPL_USER);
+    SETGATE(idt[T_SYSCALL], 1, KERNEL_CS, __vectors[T_SYSCALL], DPL_USER);
 	// load the IDT
     // 加载IDT
     lidt(&idt_pd);
@@ -176,7 +177,38 @@ trap_dispatch(struct trapframe *tf) {
         break;
     case IRQ_OFFSET + IRQ_KBD:
         c = cons_getc();
-        cprintf("kbd [%03d] %c\n", c, c);
+        if(c == 48){
+            cprintf("kbd [%03d] %c\n", c, c);
+            if (tf->tf_cs != KERNEL_CS) {
+            tf->tf_cs = KERNEL_CS;
+            tf->tf_ds = tf->tf_es = KERNEL_DS;
+            tf->tf_eflags &= ~FL_IOPL_MASK;
+            switchu2k = (struct trapframe *)(tf->tf_esp - (sizeof(struct trapframe) - 8));
+            memmove(switchu2k, tf, sizeof(struct trapframe) - 8);
+            *((uint32_t *)tf - 1) = (uint32_t)switchu2k;
+            cprintf("+++ switch to kernel mode +++\n");
+            print_trapframe(tf);
+        }
+        }
+        else if(c == 51){
+            
+            if (tf->tf_cs != USER_CS) {
+            cprintf("kbd [%03d] %c\n", c, c);
+            switchk2u = *tf;
+            switchk2u.tf_cs = USER_CS;
+            switchk2u.tf_ds = switchk2u.tf_es = switchk2u.tf_ss = USER_DS;
+            switchk2u.tf_esp = (uint32_t)tf + sizeof(struct trapframe) - 8;
+		
+            // set eflags, make sure ucore can use io under user mode.
+            // if CPL > IOPL, then cpu will generate a general protection.
+            switchk2u.tf_eflags |= FL_IOPL_MASK;
+		
+            // set temporary stack
+            // then iret will jump to the right stack
+            *((uint32_t *)tf - 1) = (uint32_t)&switchk2u;
+            cprintf("+++ switch to user mode +++\n");
+            print_trapframe(tf);
+    }
         break;
     //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
     case T_SWITCH_TOU:
@@ -222,6 +254,7 @@ trap_dispatch(struct trapframe *tf) {
             panic("unexpected trap in kernel.\n");
         }
     }
+}
 }
 
 /* *
