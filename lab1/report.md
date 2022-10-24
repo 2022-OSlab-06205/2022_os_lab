@@ -378,6 +378,9 @@ dd是一个Unix和类Unix系统上的命令，主要功能为转换和复制文�
 ```
 详细描述：
 ```
+
+# 生成kernel
+
 1.设置生成的kernel目标名为bin/kernel
 
 2.$(kernel): tools/kernel.ld指出kernel目标文件需要依赖tools/kernel.ld文件，而kernel.ld文件是一个链接脚本，其中设置了输出的目标文件的入口地址及各个段的一些属性，包括各个段是由输入文件的哪些段组成、各个段的起始地址等。
@@ -395,6 +398,8 @@ dd是一个Unix和类Unix系统上的命令，主要功能为转换和复制文�
 8.调用create_target函数：$(call create_target,kernel)，而create_target的定义为create_target = $(eval $(call do_create_target,$(1),$(2),$(3),$(4),$(5)))可见create_target只是进一步调用了do_create_target的函数：do_create_target(kernel)
 
 9.do_create_target的定义如下。由于只有一个输入参数，temp_objs为空字符串，并且走的是else分支，因此感觉这里的函数调用是直接返回，啥也没干？
+
+# 生成bootloader
 
 1.bootfiles = $(call listf_cc,boot)，前面已经知道listf_cc函数是过滤出对应目录下的.c和.S文件，因此等同于bootfiles=boot/\*.c boot/\*.S
 
@@ -414,11 +419,13 @@ dd是一个Unix和类Unix系统上的命令，主要功能为转换和复制文�
 
 10.调用了create_target函数$(call create_target,bootblock)，根据上文的分析，由于只有一个输入参数，此处函数调用应该也是直接返回，啥也没干。
 
+# 生成ucore
+
 1.设置了ucore.img的目标名：UCOREIMG := $(call totarget,ucore.img)，前面已经知道totarget的作用是添加bin/前缀，因此UCOREIMG = bin/ucore.img
 
 2.指出bin/ucore.img依赖于bin/kernel和bin/bootblock：$(UCOREIMG): $(kernel) $(bootblock)
 
-3.·( V ) d d i f = / d e v / z e r o o f = (V)dd if=/dev/zero of=(V)ddif=/dev/zeroof=@ count=10000·。这里为bin/ucore.img分配10000个block的内存空间，并全部初始化为0。由于没指定block的大小，因此为默认值512字节，则总大小为5000M，约5G。
+3.(V)dd if=/dev/zero of=(V)ddif=/dev/zeroof=@ count=10000·。这里为bin/ucore.img分配10000个block的内存空间，并全部初始化为0。由于没指定block的大小，因此为默认值512字节，则总大小为5000M，约5G。
 
 4.$(V)dd if=$(bootblock) of=$@ conv=notrunc。这里将bin/bootblock复制到bin/ucore.img
 
@@ -440,7 +447,7 @@ ucore.img是一个包含了bootloader和OS的硬盘镜像。kernel即内核，�
 
 在`sign.c`的代码中，它将输入的二进制目标文件输出为512字节的扇区文件。并将最后两个字节设置为`0x55`和`0xAA`。
 
-在BIOS执行boot阶段时，会从硬盘的第一个扇区开始寻找是否存在以`0x550xAA`为结尾的扇区，如果存在就将其加载到内存的0x7C00位置，随后PC将从这一位置开始。
+在BIOS执行boot阶段时，会从硬盘的第一个扇区开始寻找是否存在以`\0x55\0xAA`为结尾的扇区，如果存在就将其加载到内存的0x7C00位置，随后PC将从这一位置开始。
 
 ## [练习2]
 
