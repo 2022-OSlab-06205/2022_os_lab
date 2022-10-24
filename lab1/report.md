@@ -1215,12 +1215,43 @@ lab1_switch_to_kernel(void) {
 理论上来说从内核态到用户态也需要对栈进行切换，不过在lab1中并没有完整实现对物理内存的管理，而GDT中的每一个段除了对特权级的要求以外都一样，所以只需要修改一下权限就可以实现了。这也导致这个时候不会压栈，我们需要手动压栈(体现在lab1_switch_to_user中的sub $0x8,%%esp)。
 
 ## [challenge 2]
+在Challenge1中我们已经实现了用户模式和内核模式的相互切换，所需要的只是增加一个用键盘输入来控制切换的功能。我们找到控制状态切换的trap.c文件中的trap_dispatch函数，发现已经我们提供了一个case IRQ_OFFSET + IRQ_KBD:(键盘输入情况)。判断键盘输入的字符，实现控制。
 ```
 //console.c
-    //输入中间键盘的3
-    if (data == 0x04) {
-        switch_to_user();
-    } else if (data == 0x0b) {
-        switch_to_kernel();
-    }//输入中间键盘的0
+    case IRQ_OFFSET + IRQ_KBD:
+        c = cons_getc();
+        if(c == 48){
+            cprintf("kbd [%03d] %c\n", c, c);
+            if (tf->tf_cs != KERNEL_CS) {
+            tf->tf_cs = KERNEL_CS;
+            tf->tf_ds = tf->tf_es = KERNEL_DS;
+            tf->tf_eflags &= ~FL_IOPL_MASK;
+            switchu2k = (struct trapframe *)(tf->tf_esp - (sizeof(struct trapframe) - 8));
+            memmove(switchu2k, tf, sizeof(struct trapframe) - 8);
+            *((uint32_t *)tf - 1) = (uint32_t)switchu2k;
+            cprintf("+++ switch to kernel mode +++\n");
+            print_trapframe(tf);
+        }
+        }
+        else if(c == 51){
+            
+            if (tf->tf_cs != USER_CS) {
+            cprintf("kbd [%03d] %c\n", c, c);
+            switchk2u = *tf;
+            switchk2u.tf_cs = USER_CS;
+            switchk2u.tf_ds = switchk2u.tf_es = switchk2u.tf_ss = USER_DS;
+            switchk2u.tf_esp = (uint32_t)tf + sizeof(struct trapframe) - 8;
+		
+            // set eflags, make sure ucore can use io under user mode.
+            // if CPL > IOPL, then cpu will generate a general protection.
+            switchk2u.tf_eflags |= FL_IOPL_MASK;
+		
+            // set temporary stack
+            // then iret will jump to the right stack
+            *((uint32_t *)tf - 1) = (uint32_t)&switchk2u;
+            cprintf("+++ switch to user mode +++\n");
+            print_trapframe(tf);
+    }
+        break;
 ```
+
