@@ -44,22 +44,27 @@ seta20.2:
     outb %al, $0x60                                 # 0xdf = 11011111, means set P2's A20 bit(the 1 bit) to 1
 
 probe_memory:
-    movl $0, 0x8000
-    xorl %ebx, %ebx
-    movw $0x8004, %di
+    movl $0, 0x8000                                 # 将0x8000处清零，struct e820map的成员变量nr_map清零
+    xorl %ebx, %ebx                                 # 将ebx清零，如果是第一次调用或内存区域扫描完毕，则为0。 如果不是，则存放上次调用之后的计数值；
+    movw $0x8004, %di                               # di指向保存地址范围描述符（ARD）的缓冲区
 start_probe:
-    movl $0xE820, %eax
-    movl $20, %ecx
-    movl $SMAP, %edx
-    int $0x15
-    jnc cont
+    movl $0xE820, %eax                              # 参数e820h：INT 15的中断调用参数；
+    movl $20, %ecx                                  # 保存地址范围描述符的内存大小，应该大于等于20字节；
+    movl $SMAP, %edx                                # 单纯用作签名
+    int $0x15                                       # 触发中断0x15
+    jnc cont                                        # 若eflags中的cf位为0，说明执行成功，仍需继续调用中断
     movw $12345, 0x8000
     jmp finish_probe
 cont:
-    addw $20, %di
-    incl 0x8000
-    cmpl $0, %ebx
+    addw $20, %di                                   # 设置下一个BIOS返回的映射地址描述符的起始地址，应自增20
+    incl 0x8000                                     # 递增struct e820map的成员变量nr_map，计数
+    cmpl $0, %ebx                                   # 如果INT0x15返回的ebx为零，表示探测结束，否则继续探测
     jnz start_probe
+
+    # 上述代码正常执行完毕后，在0x8000地址处保存了从BIOS中获得的内存分布信息。
+    # 此信息按照struct e820map的设置来进行填充。
+    # 这部分信息将在bootloader启动ucore后，由ucore的page_init函数
+    # 来根据struct e820map的memmap（定义了起始地址为0x8000）来完成对整个机器中的物理内存的总体管理。
 finish_probe:
 
     # Switch from real to protected mode, using a bootstrap GDT
