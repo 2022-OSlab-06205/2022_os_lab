@@ -359,6 +359,22 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
     }
     return NULL;          // (8) return page table entry
 #endif
+    pde_t *pdep = &pgdir[PDX(la)];  //尝试获得页表
+    if (!(*pdep & PTE_P)) { //如果获取不成功
+        struct Page *page;
+        //假如不需要分配或是分配失败
+        if (!create || (page = alloc_page()) == NULL) { 
+            return NULL;
+        }
+        set_page_ref(page, 1); //引用次数加一
+        uintptr_t pa = page2pa(page);  //得到该页物理地址
+        memset(KADDR(pa), 0, PGSIZE); //物理地址转虚拟地址，并初始化
+        *pdep = pa | PTE_U | PTE_W | PTE_P; //设置控制位
+    }
+    return &((pte_t *)KADDR(PDE_ADDR(*pdep)))[PTX(la)]; 
+    //KADDR(PDE_ADDR(*pdep)):这部分是由页目录项地址得到关联的页表物理地址，再转成虚拟地址
+    //PTX(la)：返回虚拟地址la的页表项索引
+    //最后返回的是虚拟地址la对应的页表项入口地址
 }
 
 //get_page - get related Page struct for linear address la using PDT pgdir
@@ -404,6 +420,15 @@ page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
                                   //(6) flush tlb
     }
 #endif
+    if (*ptep & PTE_P) {  //页表项存在
+        struct Page *page = pte2page(*ptep); //找到页表项
+        if (page_ref_dec(page) == 0) {  //只被当前进程引用
+            free_page(page); //释放页
+        }
+        *ptep = 0; //该页目录项清零
+        tlb_invalidate(pgdir, la); 
+        //修改的页表是进程正在使用的那些页表，使之无效
+    }
 }
 
 //page_remove - free an Page which is related linear address la and has an validated pte

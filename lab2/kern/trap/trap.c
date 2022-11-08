@@ -57,7 +57,6 @@ idt_init(void) {
 	// set for switch from user to kernel
     // 选择需要从user特权级转化为kernel特权级的项(系统调用中断)
     SETGATE(idt[T_SWITCH_TOK], 1, KERNEL_CS, __vectors[T_SWITCH_TOK], DPL_USER);
-    SETGATE(idt[T_SYSCALL], 1, KERNEL_CS, __vectors[T_SYSCALL], DPL_USER);
 	// load the IDT
     // 加载IDT
     lidt(&idt_pd);
@@ -148,6 +147,9 @@ print_regs(struct pushregs *regs) {
     cprintf("  ecx  0x%08x\n", regs->reg_ecx);
     cprintf("  eax  0x%08x\n", regs->reg_eax);
 }
+
+/* temporary trapframe or pointer to trapframe */
+struct trapframe switchk2u, *switchu2k;
 
 /* trap_dispatch - dispatch based on what type of trap occurred */
 static void
@@ -250,6 +252,7 @@ trap_dispatch(struct trapframe *tf) {
             panic("unexpected trap in kernel.\n");
         }
     }
+}
 }
 
 /* *
