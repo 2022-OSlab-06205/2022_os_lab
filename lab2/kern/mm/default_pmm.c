@@ -93,17 +93,32 @@
  *      Try to merge blocks at lower or higher addresses. Notice: This should
  *  change some pages' `p->property` correctly.
  */
+
+// 空表，包含双向链表的入口和空闲页的总数
 free_area_t free_area;
 
+// 简化使用
 #define free_list (free_area.free_list)
 #define nr_free (free_area.nr_free)
 
+// 赋给pmm_manager中的函数指针void (*init)(void)
+// 物理内存管理器初始化，包括生成内部描述和数据结构（空闲块链表和空闲页总数），总数初始为0
+// 在pmm.c中的init_pmm_manager()调用了pmm_manager->init()
 static void
 default_init(void) {
     list_init(&free_list);
     nr_free = 0;
 }
 
+
+// 赋给pmm_manager中的函数指针void (*init_memmap)(struct Page *base, size_t n)
+// 初始化空闲页，根据初始时的空闲物理内存区域将页映射到物理内存上
+// struct Page数组是连续的，该函数将以base为基址的其后n个Page结构进行初始化
+// 确保每个Page结构reserved位为1，设置每个Page结构的ref为0，property为0
+// 将base首部Page结构的property设置为n，将free_area->nr_free增加n
+// 将base首部Page结构的flags的第2位（1位）设置为1，表明该Page是一个空闲块的头部，且没有被分配
+// 将这n个Page结构的连续块（base首部Page结构中的page_link）连接到free_area->free_list上，连接位置为free_area->free_list入口之后
+// 在pmm.c中的init_memmap()调用了pmm_manager->init_memmap()
 static void
 default_init_memmap(struct Page *base, size_t n) {
     assert(n > 0);
@@ -119,6 +134,15 @@ default_init_memmap(struct Page *base, size_t n) {
     list_add(&free_list, &(base->page_link));
 }
 
+// 赋给pmm_manager中的函数指针struct Page *(*alloc_pages)(size_t n)
+// 申请分配指定数量的物理页
+// first_fit算法将会分配空表中遇到的第一个大于等于n的空闲块
+// 必须保证n > free_area->nr_free
+// 从链表的头部开始寻找，直至找到合适的块或者全部遍历
+// 没有合适的块则return NULL，合适的块如果大于n则将其分割，剩余部分连回链表入口后
+// 将free_area->nr_free减去n
+// 将page->flags的第2位（1位）设置为0，表明该Page是一个空闲块的头部，且已经被分配
+// 在pmm.c中的alloc_pages()调用了pmm_manager->alloc_pages()
 static struct Page *
 default_alloc_pages(size_t n) {
     assert(n > 0);
@@ -148,6 +172,14 @@ default_alloc_pages(size_t n) {
     return page;
 }
 
+// 赋给pmm_manager中的函数指针void (*free_pages)(struct Page *base, size_t n)
+// 申请释放若干指定物理页，以base为基址，其后n个连续的Page结构
+// 确保n > 0，且每个Page结构的flag中的reserved和property位为0，并设置每个Page结构的flags为0，ref为0
+// 将base首部Page结构的property设置为n，将free_area->nr_free增加n
+// 将base首部Page结构的flags的第2位（1位）设置为1，表明该Page是一个空闲块的头部，且没有被分配
+// 第一次遍历，寻找链表中和base所在空闲块相邻的空闲块，此处相邻指的是在Page数组中连续分布，寻找到一个之后还能继续寻找
+// 第二次遍历，寻找这个（合并后的）空闲块应该插入到链表中的哪个位置。应插入到找到的第一个基址大于base + base->property的空闲块前面。
+// 在pmm.c中的void free_pages()调用了pmm_manager->free_pages()
 static void
 default_free_pages(struct Page *base, size_t n) {
     assert(n > 0);
@@ -193,6 +225,7 @@ default_nr_free_pages(void) {
     return nr_free;
 }
 
+// default_check()调用了basic_check()
 static void
 basic_check(void) {
     struct Page *p0, *p1, *p2;
@@ -243,6 +276,11 @@ basic_check(void) {
     free_page(p1);
     free_page(p2);
 }
+
+
+// 赋给pmm_manager中的函数指针void (*check)(void)
+// 用于检查该pmm_manager的正确性
+// 在pmm.c中的void check_alloc_page()调用了pmm_manager->check()
 
 // LAB2: below code is used to check the first fit allocation algorithm (your EXERCISE 1) 
 // NOTICE: You SHOULD NOT CHANGE basic_check, default_check functions!
@@ -310,6 +348,8 @@ default_check(void) {
     assert(total == 0);
 }
 
+// 设置这一重写好的default_pmm_manager
+// 在pmm.c中的static void init_pmm_manager()，将其赋值给常量指针pmm_manager
 const struct pmm_manager default_pmm_manager = {
     .name = "default_pmm_manager",
     .init = default_init,
