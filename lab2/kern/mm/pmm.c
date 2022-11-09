@@ -148,6 +148,8 @@ init_memmap(struct Page *base, size_t n) {
     pmm_manager->init_memmap(base, n);
 }
 
+// 禁用中断FL_IF
+
 //alloc_pages - call pmm->alloc_pages to allocate a continuous n*PAGESIZE memory 
 struct Page *
 alloc_pages(size_t n) {
@@ -161,6 +163,8 @@ alloc_pages(size_t n) {
     return page;
 }
 
+// 禁用中断FL_IF
+
 //free_pages - call pmm->free_pages to free a continuous n*PAGESIZE memory 
 void
 free_pages(struct Page *base, size_t n) {
@@ -171,6 +175,8 @@ free_pages(struct Page *base, size_t n) {
     }
     local_intr_restore(intr_flag);
 }
+
+// 禁用中断FL_IF
 
 //nr_free_pages - call pmm->nr_free_pages to get the size (nr*PAGESIZE) 
 //of current free memory
@@ -185,6 +191,16 @@ nr_free_pages(void) {
     local_intr_restore(intr_flag);
     return ret;
 }
+
+// 初始化页结构，根据物理内存的探测结果，计算Page数组的大小，并初始化
+// 在实模式下，e820map结构存储在0x8000处，现在其虚拟地址为0x8000 + KERNBASE
+// 第一次遍历memmap->map[]中的每一项，获取该块内存物理地址的基址和大小。如果类型为E820_ARM表明已保留，对应修改当前最大物理内存地址
+// 最大物理内存地址应该小于等于KMEMSIZE
+// edata[]和 end[]这些变量是ld根据kernel.ld链接脚本生成的全局变量，表示相应段的起始地址或结束地址等，它们不在任何一个.S、.c或.h文件中定义
+// 此处end为ucore内核的结束地址，将被取整后作为Page结构数组的基址，数组的大小为 maxpa / PGSIZE 取整
+// freemem为pages尾部的虚拟内核地址减去KERNELBASE
+// 第二次遍历memmap->map[]中的每一项，如果类型为E820_ARM，则计算该块物理内存所被映射的页结构基址和数量
+// pa2page计算物理地址所对应的页结构基址， (end - begin) / PGSIZE计算页的数量，随后使用init_memmap进行初始化
 
 /* pmm_init - initialize the physical memory management */
 static void

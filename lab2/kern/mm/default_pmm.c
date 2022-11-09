@@ -139,7 +139,7 @@ default_init_memmap(struct Page *base, size_t n) {
 // first_fit算法将会分配空表中遇到的第一个大于等于n的空闲块
 // 必须保证n > free_area->nr_free
 // 从链表的头部开始寻找，直至找到合适的块或者全部遍历
-// 没有合适的块则return NULL，合适的块如果大于n则将其分割，剩余部分连回链表入口后
+// 没有合适的块则return NULL，合适的块如果大于n则将其分割，剩余部分按序连回链表
 // 将free_area->nr_free减去n
 // 将page->flags的第2位（1位）设置为0，表明该Page是一个空闲块的头部，且已经被分配
 // 在pmm.c中的alloc_pages()调用了pmm_manager->alloc_pages()
