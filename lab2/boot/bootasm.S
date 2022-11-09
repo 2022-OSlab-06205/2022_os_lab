@@ -65,6 +65,15 @@ cont:
     # 此信息按照struct e820map的设置来进行填充。
     # 这部分信息将在bootloader启动ucore后，由ucore的page_init函数
     # 来根据struct e820map的memmap（定义了起始地址为0x8000）来完成对整个机器中的物理内存的总体管理。
+    # 0x8000    int nr_map
+    # 0x8004    struct map[E820MAX]
+    # 0x8004    uint64_t addr
+    # 0x800b    uint64_t size
+    # 0x8014    uint32_t type
+    # 0x8018    uint64_t addr
+    # ......    .............
+    # ......    .............
+    
 finish_probe:
 
     # Switch from real to protected mode, using a bootstrap GDT
