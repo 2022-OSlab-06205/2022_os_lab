@@ -82,6 +82,7 @@ typedef uintptr_t pde_t;
 #define E820_ARM            1       // address range memory
 #define E820_ARR            2       // address range reserved
 
+//map -> 20B
 struct e820map {
     int nr_map;
     struct {
@@ -98,8 +99,13 @@ struct e820map {
  * */
 struct Page {
     int ref;                        // page frame's reference counter
+    //ref表示这个页被页表的引用量
+    //如果这个页被页表引用了，即在某页表中有一个页表项设置了一个虚拟页到这个Page管理的物理页的映射关系
+    //就会把Page的ref加一；反之，若页表项取消，即映射关系解除，就会把Page的ref减一。
     uint32_t flags;                 // array of flags that describe the status of the page frame
+    //flags标记是否可以被分配
     unsigned int property;          // the num of free block, used in first fit pm manager
+    //property用来记录连续空闲页的数量
     list_entry_t page_link;         // free list link
 };
 
@@ -123,6 +129,11 @@ typedef struct {
     list_entry_t free_list;         // the list header
     unsigned int nr_free;           // # of free pages in this free list
 } free_area_t;
+
+/*  list_entry (list_entry_t) is defined in list.h
+struct list_entry {
+    struct list_entry *prev, *next;
+};*/  
 
 #endif /* !__ASSEMBLER__ */
 

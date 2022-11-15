@@ -5,7 +5,7 @@
 #include <mmu.h>
 #include <memlayout.h>
 #include <pmm.h>
-#include <buddy_pmm.h>
+#include <default_pmm.h>
 #include <sync.h>
 #include <error.h>
 
@@ -137,7 +137,7 @@ gdt_init(void) {
 //init_pmm_manager - initialize a pmm_manager instance
 static void
 init_pmm_manager(void) {
-    pmm_manager = &buddy_pmm_manager;
+    pmm_manager = &default_pmm_manager;
     cprintf("memory management: %s\n", pmm_manager->name);
     pmm_manager->init();
 }
@@ -333,6 +333,19 @@ pmm_init(void) {
 
 }
 
+/*
+初始化物理内存页管理器框架pmm_manager；
+建立空闲的page链表，这样就可以分配以页（4KB）为单位的空闲内存了；
+检查物理内存页分配算法；
+为确保切换到分页机制后，代码能够正常执行，先建立一个临时二级页表；
+建立一一映射关系的二级页表；
+使能分页机制；
+从新设置全局段描述符表；
+取消临时二级页表；
+检查页表建立是否正确；
+通过自映射机制完成页表的打印输出（这部分是扩展知识）
+*/
+
 //get_pte - get pte and return the kernel virtual address of this pte for la
 //        - if the PT contians this pte didn't exist, alloc a page for PT
 // parameter:
@@ -441,7 +454,7 @@ page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
         if (page_ref_dec(page) == 0) {  //只被当前进程引用
             free_page(page); //释放页
         }
-        *ptep = 0; //该页目录项清零
+        *ptep = 0; //该页表项清零
         tlb_invalidate(pgdir, la); 
         //修改的页表是进程正在使用的那些页表，使之无效
     }
