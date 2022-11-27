@@ -25,8 +25,10 @@ _clock_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, in
     list_entry_t *head=(list_entry_t*) mm->sm_priv;
     list_entry_t *entry=&(page->pra_page_link);
 
-    assert(entry != NULL && head != NULL);// 将新页插入到链表最后
-    list_add(head -> prev, entry);// 新插入的页dirty bit标记为0.
+    assert(entry != NULL && head != NULL);
+    // 将新页插入到链表最后
+    list_add(head -> prev, entry);
+    // 新插入的页dirty bit标记为0.
     struct Page *ptr = le2page(entry, pra_page_link);
     pte_t *pte = get_pte(mm -> pgdir, ptr -> pra_vaddr, 0);
     *pte &= ~PTE_D;
@@ -37,30 +39,34 @@ _clock_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, in
 static int
 _clock_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tick)
 {
-     list_entry_t *head=(list_entry_t*) mm->sm_priv;
-     assert(head != NULL);
-     assert(in_tick==0);
+    list_entry_t *head=(list_entry_t*) mm->sm_priv;
+    assert(head != NULL);
+    assert(in_tick==0);
 
-     list_entry_t *p = head;
-     while (1) {
-         p = list_next(p);
-         if (p == head) {
-             p = list_next(p);
-         }
-         struct Page *ptr = le2page(p, pra_page_link);
-         pte_t *pte = get_pte(mm -> pgdir, ptr -> pra_vaddr, 0);
-         //获取页表项
-         if ((*pte & PTE_D) == 1) {// 如果dirty bit为1，改为0
-             *pte &= ~PTE_D;
-         } 
-         else 
-         {// 如果dirty bit为0，则标记为换出页
-             *ptr_page = ptr;
-             list_del(p);
-             break;
-         }
-     }
-     return 0;
+    list_entry_t *p = head;
+    while (1) 
+    {
+        p = list_next(p);
+        if (p == head) 
+        {
+            p = list_next(p);
+        }
+        struct Page *ptr = le2page(p, pra_page_link);
+        pte_t *pte = get_pte(mm -> pgdir, ptr -> pra_vaddr, 0);
+        if ((*pte & PTE_D) == 1) 
+        {
+            // 如果dirty bit为1，改为0
+            *pte &= ~PTE_D;
+        } 
+        else 
+        {
+            // 如果dirty bit为0，则标记为换出页
+            *ptr_page = ptr;
+            list_del(p);
+            break;
+        }
+    }
+    return 0;
 }
 
 
