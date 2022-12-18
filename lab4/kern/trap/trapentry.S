@@ -40,6 +40,7 @@ __trapret:
 
     # get rid of the trap number and error code
     addl $0x8, %esp
+    # 此时栈顶是tf.tf_eip 
     iret
 
 .globl forkrets

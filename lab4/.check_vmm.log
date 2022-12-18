@@ -102,16 +102,16 @@ check_swap() succeeded!
 this initproc, pid = 1, name = "init"
 To U: "Hello world!!".
 To U: "en.., Bye, Bye. :)"
-kernel panic at kern/process/proc.c:354:
+kernel panic at kern/process/proc.c:389:
     process exit!!.
 
 stack trackback:
-ebp:0xc0330f98 eip:0xc0100b00 args:0xc010a2a8 0xc0330fdc 0x00000162 0xc0330fcc 
+ebp:0xc0330f98 eip:0xc0100b00 args:0xc010a2a8 0xc0330fdc 0x00000185 0xc0330fcc 
     kern/debug/kdebug.c:308: print_stackframe+25
-ebp:0xc0330fc8 eip:0xc01004a9 args:0xc010c1f5 0x00000162 0xc010c209 0xc012e044 
+ebp:0xc0330fc8 eip:0xc01004a9 args:0xc010c1f5 0x00000185 0xc010c209 0xc012e044 
     kern/debug/panic.c:27: __panic+107
 ebp:0xc0330fe8 eip:0xc01091d5 args:0x00000000 0xc010c288 0x00000000 0x00000010 
-    kern/process/proc.c:354: do_exit+37
+    kern/process/proc.c:389: do_exit+37
 Welcome to the kernel debug monitor!!
 Type 'help' for a list of commands.
 K> 
